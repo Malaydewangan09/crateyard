@@ -1,0 +1,594 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Crateyard</title>
+  <meta name="description" content="Crateyard runs Docker on your Mac in a small Linux VM that gives memory back when your containers go quiet. Same docker commands. Open source.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <meta name="theme-color" content="#0b1016">
+  <link rel="canonical" href="https://www.malaydewangan.com/crateyard/">
+  <meta property="og:site_name" content="Crateyard">
+  <meta property="og:title" content="Crateyard">
+  <meta property="og:description" content="Docker on your Mac in a small Linux VM that hands memory back when it goes quiet. 0.6 GB idle, 0 GB asleep.">
+  <meta property="og:url" content="https://www.malaydewangan.com/crateyard/">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://www.malaydewangan.com/crateyard/og.jpg?v=1">
+  <meta property="og:image:width" content="2400">
+  <meta property="og:image:height" content="1260">
+  <meta property="og:image:type" content="image/jpeg">
+  <meta property="og:image:alt" content="Crateyard: Docker on your Mac that hands memory back when it goes quiet, with a container ship on the water.">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Crateyard">
+  <meta name="twitter:description" content="Docker on your Mac in a small Linux VM that hands memory back when it goes quiet.">
+  <meta name="twitter:image" content="https://www.malaydewangan.com/crateyard/og.jpg?v=1">
+  <meta name="twitter:image:alt" content="Crateyard: Docker on your Mac that hands memory back when it goes quiet.">
+  <meta name="twitter:creator" content="@Malaydewangan18">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #07090c;
+      --night: #0b1016;
+      --hull: #0e1217;
+      --quay: #161c23;
+      --steel: #2a333d;
+      --text: #eef0f2;
+      --soft: #9aa3ad;
+      --dim: #5b636c;
+      --line: #1f262e;
+      --sea: #0f2a3f;
+      --sea-top: #1f5276;
+      --ship: #e9ecef;
+      --buoy: #ff6a3d;
+      --c1: #ff6a3d;
+      --c2: #2bb3a3;
+      --c3: #e4b660;
+      --c4: #6c8cff;
+      --c5: #d9534f;
+      --sans: "Geist", -apple-system, system-ui, sans-serif;
+      --serif: "Instrument Serif", Georgia, serif;
+      --mono: "Geist Mono", ui-monospace, monospace;
+      --gutter: clamp(16px, 4vw, 56px);
+      --ease: cubic-bezier(.22, .8, .24, 1);
+      color-scheme: dark;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.6 var(--sans); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+    a { color: inherit; text-decoration: none; }
+    ::selection { background: var(--buoy); color: #000; }
+    .wrap { max-width: 1240px; margin: 0 auto; padding: 0 var(--gutter); }
+
+    /* Crateyard's mark: a container resting on the load line. */
+    .mark { display: block; width: 26px; height: 26px; fill: currentColor; }
+
+    header { display: flex; justify-content: space-between; align-items: center; padding: 22px 0; }
+    .logo { display: flex; align-items: center; gap: 12px; font-weight: 600; letter-spacing: -0.01em; }
+    .logo .mark { color: var(--buoy); }
+    header nav { display: flex; gap: 28px; font-size: 14px; color: var(--soft); }
+    header nav a:hover { color: var(--text); }
+
+    .hero { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: clamp(32px, 5vw, 80px); align-items: center; padding: clamp(40px, 8vh, 100px) 0 clamp(64px, 12vh, 140px); }
+    .hero h1 { font: 500 clamp(44px, 5.8vw, 86px)/0.98 var(--sans); letter-spacing: -0.045em; margin: 0; }
+    .hero h1 em { font: italic 400 1.08em/0.9 var(--serif); letter-spacing: -0.02em; }
+    .hero p { color: var(--soft); font-size: clamp(17px, 1.4vw, 19px); max-width: 30em; margin: 28px 0 0; }
+    .cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 36px; }
+    .btn { display: inline-flex; align-items: center; height: 46px; padding: 0 20px; border-radius: 999px; font-weight: 500; font-size: 15px; transition: transform 200ms var(--ease); }
+    .btn.primary { background: var(--text); color: var(--bg); }
+    .btn.primary:hover { transform: translateY(-1px); }
+    .btn.ghost { border: 1px solid var(--line); color: var(--soft); }
+    .btn.ghost:hover { color: var(--text); border-color: var(--dim); }
+
+    /* Harbour scene. Containers on the ship are running containers. The ship sits lower when loaded and floats when idle. */
+    .harbour { position: relative; border-radius: 28px; background: var(--night); border: 1px solid var(--line); overflow: hidden; }
+    .harbour svg { display: block; width: 100%; height: auto; }
+    .readout { position: absolute; left: 22px; right: 22px; top: 18px; display: flex; justify-content: space-between; font: 12.5px/1.4 var(--mono); color: var(--soft); pointer-events: none; }
+    .readout b { color: var(--text); font-weight: 500; }
+    .cmd { position: absolute; left: 22px; bottom: 16px; font: 12.5px var(--mono); color: #cfe3f2; pointer-events: none; }
+    .cmd::before { content: "$ "; color: var(--dim); }
+    .cmd .caret { display: inline-block; width: 7px; height: 13px; margin-left: 2px; background: #cfe3f2; vertical-align: -2px; animation: blink 1s steps(1) infinite; }
+    @keyframes blink { 50% { opacity: 0; } }
+
+    .star { fill: #cfd8e3; animation: twinkle 4s ease-in-out infinite; }
+    @keyframes twinkle { 0%, 100% { opacity: .25; } 50% { opacity: .9; } }
+    .bob { animation: bob 5s ease-in-out infinite; transform-box: fill-box; }
+    @keyframes bob { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(3px) rotate(-0.4deg); } }
+    .wave { animation: drift 7s linear infinite; }
+    .wave.slow { animation-duration: 11s; opacity: .5; }
+    @keyframes drift { to { transform: translateX(-120px); } }
+    .lamp { animation: lamp 2.2s ease-in-out infinite; }
+    @keyframes lamp { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
+
+    section { padding: clamp(80px, 12vw, 150px) 0 0; }
+    .kicker { font: 12.5px var(--mono); color: var(--buoy); letter-spacing: .06em; margin: 0 0 14px; }
+    h2 { font: 500 clamp(32px, 4.2vw, 56px)/1.04 var(--sans); letter-spacing: -0.035em; margin: 0; max-width: 18ch; }
+    h2 em { font: italic 400 1.08em var(--serif); }
+    .lede { color: var(--soft); font-size: 18px; max-width: 34em; margin: 20px 0 0; }
+
+
+    .scenes { margin: 56px 0 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(20px, 2.4vw, 32px); }
+    .scene { margin: 0; }
+    .scene svg { display: block; width: 100%; height: auto; background: var(--night); border: 1px solid var(--line); border-radius: 20px; }
+    .scene figcaption { padding: 18px 4px 0; }
+    .scene b { display: block; font: 500 19px/1.25 var(--sans); letter-spacing: -0.02em; }
+    .scene figcaption > span { display: block; color: var(--soft); font-size: 15px; margin-top: 6px; }
+    .scene .num { font: italic 400 1.2em var(--serif); color: var(--buoy); }
+    .scene .water { fill: var(--sea); }
+    .scene .label { font: 10px var(--mono); fill: var(--dim); letter-spacing: .04em; }
+    .scene .note { font: 10.5px var(--mono); fill: var(--soft); }
+
+    .hullbox { fill: var(--hull); stroke: var(--steel); stroke-width: 1.5; }
+    .memline { transition: transform 900ms var(--ease); }
+    .memline line { stroke: var(--buoy); stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .memline text { font: 10px var(--mono); fill: var(--buoy); }
+    .memcrate { transition: opacity 400ms, transform 400ms var(--ease); }
+
+    .tower { fill: var(--quay); stroke: var(--steel); }
+    .lamphouse { fill: var(--steel); }
+    .bulb { fill: var(--dim); transition: fill 200ms; }
+    .bulb.on { fill: var(--buoy); }
+    .beam { fill: var(--buoy); opacity: 0; transition: opacity 300ms; }
+    .beam.on { opacity: .14; }
+    .clock { font: italic 400 46px var(--serif); fill: var(--text); }
+
+    .diskbox { fill: var(--hull); stroke: var(--steel); stroke-width: 1.5; stroke-dasharray: 6 4; }
+    .disk { transform-origin: 40px 108px; animation: shrink 8s var(--ease) infinite; }
+    .disk .gone { animation: unload 8s var(--ease) infinite; }
+    .stay { animation: slide 8s var(--ease) infinite; }
+    .trim { fill: var(--buoy); animation: stamp 8s infinite; }
+    @keyframes unload { 0%, 20% { opacity: 1; transform: none; } 34%, 92% { opacity: 0; transform: translateY(-24px); } 100% { opacity: 1; transform: none; } }
+    @keyframes slide { 0%, 36% { transform: none; } 50%, 92% { transform: translateX(-132px); } 100% { transform: none; } }
+    @keyframes shrink { 0%, 50% { transform: none; } 66%, 92% { transform: scaleX(.38); } 100% { transform: none; } }
+    @keyframes stamp { 0%, 48% { opacity: 0; } 54%, 88% { opacity: 1; } 96%, 100% { opacity: 0; } }
+
+    .quaybox { fill: var(--quay); }
+    .hullship { fill: var(--ship); }
+    .cable { fill: none; stroke: var(--steel); stroke-width: 3; stroke-linecap: round; }
+    .pulse { fill: none; stroke: var(--buoy); stroke-width: 3; stroke-linecap: round; stroke-dasharray: 8 46; animation: flow 1.6s linear infinite; }
+    @keyframes flow { to { stroke-dashoffset: -54; } }
+    .gate line { stroke: var(--dim); stroke-width: 3; stroke-linecap: round; }
+    .gate .bar { stroke: var(--c5); }
+    .vs { fill: var(--buoy); }
+
+    .folder { fill: var(--c3); }
+    .ftext { font: 10.5px var(--mono); fill: rgba(0,0,0,.7); }
+    .surface { stroke: var(--sea-top); stroke-width: 1.5; }
+    .mirror { opacity: .38; transform-origin: 160px 114px; animation: ripple 3.2s ease-in-out infinite; }
+    @keyframes ripple { 0%, 100% { transform: skewX(0deg) scaleX(1); } 50% { transform: skewX(4deg) scaleX(1.03); } }
+
+    .bollard { fill: var(--steel); }
+    .ctext { font: 9.5px var(--mono); fill: rgba(0,0,0,.72); }
+    .arrive { animation: arrive 7s var(--ease) infinite; }
+    .rope { fill: none; stroke: #8b96a1; stroke-width: 1.5; stroke-dasharray: 200; animation: rope 7s var(--ease) infinite; }
+    .tagbox { fill: var(--text); }
+    .tagtext { font: 11px var(--mono); fill: var(--bg); }
+    .tag { transform-origin: 70px 82px; animation: tag 7s var(--ease) infinite; }
+    @keyframes arrive { 0% { transform: translateX(140px); opacity: 0; } 14%, 78% { transform: none; opacity: 1; } 92%, 100% { transform: translateX(140px); opacity: 0; } }
+    @keyframes rope { 0%, 16% { stroke-dashoffset: 200; } 28%, 72% { stroke-dashoffset: 0; } 80%, 100% { stroke-dashoffset: 200; } }
+    @keyframes tag { 0%, 26% { opacity: 0; transform: scale(.7); } 32%, 72% { opacity: 1; transform: none; } 78%, 100% { opacity: 0; transform: scale(.7); } }
+
+    .facts { margin: clamp(56px, 8vw, 96px) 0 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid var(--line); }
+    .facts div { padding: 28px 20px 0 0; }
+    .facts b { display: block; font: italic 400 clamp(40px, 5vw, 64px)/1 var(--serif); color: var(--text); }
+    .facts span { display: block; color: var(--dim); font-size: 14px; margin-top: 10px; }
+
+    .same { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(32px, 6vw, 96px); align-items: center; }
+    .shell { font: 14px/2 var(--mono); color: var(--soft); border-left: 2px solid var(--line); padding-left: 24px; min-height: 9em; }
+    .shell div::before { content: "$ "; color: var(--dim); }
+    .shell .out { color: var(--c2); }
+    .shell .out::before { content: ""; }
+
+    .start ol { list-style: none; counter-reset: s; margin: 48px 0 0; padding: 0; display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+    .start li { counter-increment: s; background: var(--bg); padding: 22px 24px; display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 16px; align-items: center; }
+    .start li::before { content: "0" counter(s); font: 12.5px var(--mono); color: var(--dim); }
+    .start code { font: 13.5px var(--mono); color: var(--text); overflow-x: auto; white-space: nowrap; scrollbar-width: none; }
+    .start small { color: var(--dim); font-size: 13px; }
+
+    .inline { font: 14px var(--mono); color: var(--text); }
+    .limits { color: var(--soft); max-width: 46em; padding-left: 20px; }
+    .limits li { margin: 6px 0; }
+
+    .reveal { opacity: 0; transform: translateY(18px); transition: opacity 700ms var(--ease), transform 700ms var(--ease); }
+    .reveal.seen { opacity: 1; transform: none; }
+
+    footer { padding: 120px 0 48px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px; color: var(--dim); font-size: 14px; }
+    footer a:hover { color: var(--text); }
+
+    @media (max-width: 860px) {
+      .hero, .same { grid-template-columns: minmax(0, 1fr); }
+      .scenes { grid-template-columns: minmax(0, 1fr); }
+      .facts { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 24px; }
+      .start li { grid-template-columns: 32px minmax(0, 1fr); }
+      .start small { grid-column: 2; }
+      header nav a:not(:last-child) { display: none; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .star, .bob, .wave, .lamp, .cmd .caret, .disk, .disk .gone, .stay, .trim, .pulse, .mirror, .arrive, .rope, .tag { animation: none; }
+      .rope { stroke-dasharray: none; }
+      .reveal { opacity: 1; transform: none; transition: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <a class="logo" href="#"><svg class="mark" viewBox="0 0 64 64" aria-hidden="true"><path fill-rule="evenodd" d="M17 18h30a2 2 0 0 1 2 2v18a2 2 0 0 1-2 2H17a2 2 0 0 1-2-2V20a2 2 0 0 1 2-2zM22 22v14h3V22zM30.5 22v14h3V22zM39 22v14h3V22z"/><path d="M6.25 43h51.5a2.25 2.25 0 0 1 0 4.5H6.25a2.25 2.25 0 0 1 0-4.5z"/></svg>Crateyard</a>
+      <nav><a href="#how">How it works</a><a href="#start">Get started</a><a href="https://github.com/Malaydewangan09/crateyard">GitHub</a></nav>
+    </header>
+
+    <div class="hero">
+      <div>
+        <h1>Your Mac was never meant to be a <em>cargo ship.</em></h1>
+        <p>Crateyard runs Docker in a small Linux VM that gives memory back to macOS when your containers go quiet. Same docker commands. Open source.</p>
+        <div class="cta">
+          <a class="btn primary" href="#start">Get started</a>
+          <a class="btn ghost" href="https://github.com/Malaydewangan09/crateyard">Source on GitHub</a>
+        </div>
+      </div>
+
+      <div class="harbour" role="img" aria-label="A harbour at night. A crane loads five containers onto a ship, which sits lower in the water, then unloads them and the ship floats back up.">
+        <svg id="scene" viewBox="0 0 600 560" aria-hidden="true">
+          <g id="stars"></g>
+          <!-- Quay and crane -->
+          <rect x="440" y="400" width="160" height="160" fill="var(--quay)"/>
+          <rect x="440" y="398" width="160" height="4" fill="var(--steel)"/>
+          <g fill="var(--steel)">
+            <rect x="540" y="96" width="12" height="304"/>
+            <rect x="508" y="380" width="76" height="20"/>
+            <rect x="120" y="92" width="470" height="10"/>
+            <rect x="552" y="78" width="40" height="14"/>
+            <rect x="530" y="102" width="32" height="26"/>
+            <path d="M546 96 L170 92 L546 60 Z" fill="none" stroke="var(--steel)" stroke-width="2"/>
+          </g>
+          <circle class="lamp" cx="588" cy="72" r="3" fill="var(--buoy)"/>
+          <g id="trolley">
+            <rect x="-14" y="102" width="28" height="9" rx="1" fill="#3a4550"/>
+            <line id="cable" x1="0" y1="111" x2="0" y2="160" stroke="#8b96a1" stroke-width="1.5"/>
+            <rect id="spreader" x="-34" y="160" width="68" height="5" fill="#8b96a1"/>
+          </g>
+
+          <!-- Ship. Everything inside #ship sits lower as containers load. -->
+          <g id="ship">
+            <g class="bob">
+              <g id="cargo"></g>
+              <rect x="70" y="354" width="58" height="56" fill="var(--ship)"/>
+              <rect x="80" y="338" width="38" height="18" fill="var(--ship)"/>
+              <g fill="#7fa7c4"><rect x="80" y="366" width="10" height="7"/><rect x="94" y="366" width="10" height="7"/><rect x="108" y="366" width="10" height="7"/></g>
+              <rect x="96" y="320" width="6" height="18" fill="var(--ship)"/>
+              <path d="M40 410 L420 410 L398 486 L66 486 Z" fill="#1a2028"/>
+              <rect x="40" y="406" width="380" height="5" fill="var(--buoy)"/>
+              <text x="64" y="436" font-family="Geist Mono, monospace" font-size="11" fill="#8b96a1" letter-spacing="2">CRATEYARD</text>
+              <g transform="translate(316 418) scale(0.45)" fill="var(--text)"><path fill-rule="evenodd" d="M17 18h30a2 2 0 0 1 2 2v18a2 2 0 0 1-2 2H17a2 2 0 0 1-2-2V20a2 2 0 0 1 2-2zM22 22v14h3V22zM30.5 22v14h3V22zM39 22v14h3V22z"/><path d="M6.25 43h51.5a2.25 2.25 0 0 1 0 4.5H6.25a2.25 2.25 0 0 1 0-4.5z"/></g>
+            </g>
+          </g>
+
+          <!-- Sea in front of the hull, so a loaded ship visibly sinks into it. -->
+          <rect x="0" y="448" width="600" height="112" fill="var(--sea)"/>
+          <g class="wave slow"><path d="M0 452 q30 -6 60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0" stroke="var(--sea-top)" stroke-width="2" fill="none"/></g>
+          <g class="wave"><path d="M0 449 q30 -5 60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0" stroke="var(--sea-top)" stroke-width="3" fill="none"/></g>
+          <g id="free"></g>
+        </svg>
+        <div class="readout"><span>VM memory</span><b id="readout">idle</b></div>
+        <div class="cmd"><span id="cmd"></span><span class="caret"></span></div>
+      </div>
+    </div>
+
+    <section id="how">
+      <p class="kicker reveal">LOAD MARKS</p>
+      <h2 class="reveal">Light when idle. <em>Loaded only when you are.</em></h2>
+      <p class="lede reveal">A Mac is a laptop first. Crateyard treats memory and disk as things it borrows, and hands them back.</p>
+      <div class="scenes">
+        <figure class="scene reveal">
+          <svg viewBox="0 0 320 200" aria-hidden="true">
+            <path class="water" d="M0 176 Q40 170 80 176 T160 176 T240 176 T320 176 V200 H0Z"/>
+            <rect x="56" y="46" width="208" height="128" rx="14" class="hullbox"/>
+            <g id="memCrates"></g>
+            <g id="memLine" class="memline">
+              <line x1="62" x2="258" y1="0" y2="0"/>
+              <text x="252" y="-6" text-anchor="end">VM</text>
+            </g>
+          </svg>
+          <figcaption><b>Memory sized to what you use</b><span>A balloon tracks what Linux uses and keeps the VM near it, about 0.6 GB when idle. After 5 quiet minutes the VM sleeps and macOS gets all of it back.</span></figcaption>
+        </figure>
+
+        <figure class="scene reveal">
+          <svg viewBox="0 0 320 200" aria-hidden="true">
+            <path id="beam" class="beam" d="M86 60 L320 20 L320 110 Z"/>
+            <path d="M70 160 L76 66 H96 L102 160 Z" class="tower"/>
+            <rect x="72" y="52" width="28" height="16" rx="3" class="lamphouse"/>
+            <circle id="bulb" cx="86" cy="60" r="5" class="bulb"/>
+            <path class="water" d="M0 160 Q40 154 80 160 T160 160 T240 160 T320 160 V200 H0Z"/>
+            <text id="bootClock" x="214" y="146" class="clock" text-anchor="middle">0.0 s</text>
+            <text id="bootNote" x="214" y="180" class="note" text-anchor="middle">booting</text>
+          </svg>
+          <figcaption><b>Ready in <span class="num">2.8 s</span></b><span>An Alpine VM with stock dockerd boots straight from Apple's Virtualization framework. The clock runs at real speed to the fastest boot measured on an M4 Air. Most boots take 3 to 4 s.</span></figcaption>
+        </figure>
+
+        <figure class="scene reveal">
+          <svg viewBox="0 0 320 200" aria-hidden="true">
+            <g class="disk">
+              <rect x="40" y="58" width="240" height="100" rx="12" class="diskbox"/>
+              <g class="gone"><rect x="56" y="112" width="40" height="30" rx="2" fill="var(--c4)"/><rect x="100" y="112" width="40" height="30" rx="2" fill="var(--c5)"/><rect x="56" y="78" width="40" height="30" rx="2" fill="var(--c3)"/><rect x="144" y="112" width="40" height="30" rx="2" fill="var(--c2)"/></g>
+            </g>
+            <rect x="188" y="112" width="40" height="30" rx="2" fill="var(--c1)" class="stay"/>
+            <text x="40" y="44" class="label">data.img</text>
+            <text x="280" y="44" class="label trim" text-anchor="end">fstrim</text>
+            <path class="water" d="M0 180 Q40 174 80 180 T160 180 T240 180 T320 180 V200 H0Z"/>
+          </svg>
+          <figcaption><b>The disk shrinks too</b><span>Images and volumes live on their own sparse disk. Crateyard trims it every hour, so space freed inside the VM comes back to your Mac.</span></figcaption>
+        </figure>
+
+        <figure class="scene reveal">
+          <svg viewBox="0 0 320 200" aria-hidden="true">
+            <rect x="0" y="92" width="92" height="108" class="quaybox"/>
+            <text x="14" y="84" class="label">your Mac</text>
+            <path d="M214 92 H310 L298 122 H226 Z" class="hullship"/>
+            <text x="300" y="84" class="label" text-anchor="end">VM</text>
+            <path class="water" d="M92 104 Q120 99 148 104 T204 104 T260 104 T320 104 V200 H92Z"/>
+            <path d="M92 150 C140 196 176 196 230 122" class="cable"/>
+            <path d="M92 150 C140 196 176 196 230 122" class="pulse"/>
+            <g class="gate"><line x1="132" y1="58" x2="132" y2="94"/><line x1="176" y1="58" x2="176" y2="94"/><line x1="128" y1="66" x2="180" y2="66" class="bar"/></g>
+            <text x="154" y="46" class="note" text-anchor="middle">no VM IP</text>
+            <text x="160" y="176" class="label vs" text-anchor="middle">vsock</text>
+          </svg>
+          <figcaption><b>No VM on your network</b><span>The Docker socket and published ports reach the VM over vsock, a private channel between your Mac and the VM. The VM has no IP to reach and dockerd opens no port.</span></figcaption>
+        </figure>
+
+        <figure class="scene reveal">
+          <svg viewBox="0 0 320 200" aria-hidden="true">
+            <g id="folder"><path d="M110 50 h34 l10 10 h56 v52 h-100 Z" class="folder"/><text x="160" y="92" class="ftext" text-anchor="middle">/Users/you/app</text></g>
+            <line x1="0" y1="114" x2="320" y2="114" class="surface"/>
+            <g class="mirror"><use href="#folder" transform="translate(0 228) scale(1 -1)"/></g>
+            <text x="14" y="106" class="label">Mac</text>
+            <text x="14" y="132" class="label">VM</text>
+          </svg>
+          <figcaption><b>Your files, same paths</b><span>/Users is shared into the VM at the same path, so bind mounts in your compose files work as written.</span></figcaption>
+        </figure>
+
+        <figure class="scene reveal">
+          <svg viewBox="0 0 320 200" aria-hidden="true">
+            <rect x="0" y="120" width="104" height="80" class="quaybox"/>
+            <rect x="70" y="104" width="12" height="16" rx="2" class="bollard"/>
+            <path d="M178 136 H312 L300 166 H190 Z" class="hullship"/>
+            <path class="water" d="M104 150 Q130 145 156 150 T208 150 T260 150 T320 150 V200 H104Z"/>
+            <g class="arrive"><rect x="212" y="104" width="62" height="30" rx="2" fill="var(--c1)"/><text x="243" y="123" class="ctext" text-anchor="middle">web :80</text></g>
+            <path d="M212 118 Q150 140 82 110" class="rope"/>
+            <g class="tag"><rect x="14" y="70" width="112" height="24" rx="12" class="tagbox"/><text x="70" y="86" class="tagtext" text-anchor="middle">localhost:8080</text></g>
+          </svg>
+          <figcaption><b>Ports where you expect them</b><span>Publish a port and it answers on your Mac's localhost. Crateyard opens and closes them as containers come and go.</span></figcaption>
+        </figure>
+      </div>
+
+      <div class="facts reveal">
+        <div><b>2.8 s</b><span>fastest boot to dockerd, M4 Air</span></div>
+        <div><b>0</b><span>daemon ports on your network</span></div>
+        <div><b>0 GB</b><span>while asleep, measured on an M4 Air</span></div>
+        <div><b>MIT</b><span>licence, all of it</span></div>
+      </div>
+    </section>
+
+    <section class="same">
+      <div>
+        <p class="kicker reveal">SAME DOCKER</p>
+        <h2 class="reveal">Nothing to <em>relearn.</em></h2>
+        <p class="lede reveal">Crateyard runs the real dockerd, unchanged, and points your docker CLI at it while it runs. Your compose files and scripts keep working.</p>
+      </div>
+      <div class="shell" id="shell" aria-label="docker context use crateyard, docker compose up -d, curl localhost:8080 returns ok"></div>
+    </section>
+
+    <section class="start" id="start">
+      <p class="kicker reveal">GET STARTED</p>
+      <h2 class="reveal">One line, <em>then press Start.</em></h2>
+      <ol class="reveal">
+        <li><code>curl -fsSL https://raw.githubusercontent.com/Malaydewangan09/crateyard/main/install.sh | sh</code><small>installs Crateyard.app</small></li>
+        <li><code>open -a Crateyard</code><small>builds the VM once, a few minutes, then press Start</small></li>
+        <li><code>docker run hello-world</code><small>Crateyard has already switched your docker context</small></li>
+      </ol>
+      <p class="lede reveal">The script checks the download against its published SHA-256 before installing. Rather build it yourself? Clone the repo and run <code class="inline">./app/scripts/bundle.sh</code>.</p>
+    </section>
+
+    <section>
+      <p class="kicker reveal">HONEST LIMITS</p>
+      <ul class="limits reveal">
+        <li>Work in progress. Memory used while containers run comes back only when the VM sleeps.</li>
+        <li>Docker Desktop checks the active docker context every few seconds, so Crateyard cannot sleep while it is open.</li>
+        <li>Apple silicon only. TCP ports only, no UDP yet.</li>
+        <li>Not notarized by Apple. The install script avoids the Gatekeeper prompt, a downloaded DMG needs Open Anyway.</li>
+        <li>No Kubernetes, and it is not trying to be Docker Desktop.</li>
+      </ul>
+    </section>
+
+    <footer>
+      <span>Crateyard is open source under the MIT licence, built by Malay Dewangan.</span>
+      <a href="https://github.com/Malaydewangan09/crateyard">github.com/Malaydewangan09/crateyard</a>
+    </footer>
+  </div>
+
+  <script>
+    const NS = 'http://www.w3.org/2000/svg';
+    const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const $ = (id) => document.getElementById(id);
+    const el = (tag, attrs) => {
+      const n = document.createElementNS(NS, tag);
+      for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+      return n;
+    };
+
+    for (let i = 0; i < 38; i++) {
+      const s = el('circle', { class: 'star', cx: Math.random() * 600, cy: 20 + Math.random() * 230, r: Math.random() < 0.15 ? 1.6 : 0.9 });
+      s.style.animationDelay = `${(Math.random() * 4).toFixed(2)}s`;
+      $('stars').append(s);
+    }
+
+    // Container geometry. Dock spots are where they wait on the quay, slots are their places on deck (ship coordinates).
+    // Load order is top of the quay stack first onto the bottom deck row, so every stack is physically possible both ways.
+    const W = 62, H = 30;
+    const boxes = [
+      { name: 'worker', color: 'var(--c3)', dock: [489, 308], slot: [150, 376] },
+      { name: 'web', color: 'var(--c1)', dock: [526, 338], slot: [216, 376] },
+      { name: 'api', color: 'var(--c2)', dock: [452, 338], slot: [282, 376] },
+      { name: 'redis', color: 'var(--c5)', dock: [526, 368], slot: [183, 346] },
+      { name: 'postgres', color: 'var(--c4)', dock: [452, 368], slot: [249, 346] },
+    ];
+    for (const b of boxes) {
+      const g = el('g', {});
+      g.append(el('rect', { width: W, height: H, rx: 1.5, fill: b.color }));
+      for (let x = 8; x < W; x += 8) g.append(el('line', { x1: x, y1: 4, x2: x, y2: H - 4, stroke: 'rgba(0,0,0,.18)', 'stroke-width': 1.5 }));
+      const t = el('text', { x: W / 2, y: H / 2 + 4, 'text-anchor': 'middle', 'font-family': 'Geist Mono, monospace', 'font-size': 9.5, fill: 'rgba(0,0,0,.72)' });
+      t.textContent = b.name;
+      g.append(t);
+      b.node = g;
+      b.x = b.dock[0]; b.y = b.dock[1];
+      place(b);
+      $('free').append(g);
+    }
+
+    const ship = { dy: 0 };
+    const trolley = { x: 489, rope: 160 };
+    function place(b) { b.node.setAttribute('transform', `translate(${b.x} ${b.y})`); }
+    function drawShip() { $('ship').setAttribute('transform', `translate(0 ${ship.dy})`); }
+    function drawTrolley() {
+      $('trolley').setAttribute('transform', `translate(${trolley.x} 0)`);
+      $('cable').setAttribute('y2', trolley.rope);
+      $('spreader').setAttribute('y', trolley.rope);
+    }
+    drawTrolley();
+
+    const ease = (t) => (t < .5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2);
+    function tween(obj, to, ms, onFrame) {
+      const from = Object.fromEntries(Object.keys(to).map((k) => [k, obj[k]]));
+      const start = performance.now();
+      return new Promise((done) => {
+        const step = (now) => {
+          const k = ease(Math.min(1, (now - start) / ms));
+          for (const key in to) obj[key] = from[key] + (to[key] - from[key]) * k;
+          onFrame();
+          if (k < 1) requestAnimationFrame(step); else done();
+        };
+        requestAnimationFrame(step);
+      });
+    }
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+    async function typeCmd(text) {
+      const out = $('cmd');
+      out.textContent = '';
+      for (const ch of text) { out.textContent += ch; await wait(38); }
+    }
+
+    // The crane carries one container: hook it, lift, swing, lower, let go.
+    async function carry(b, toX, toY, toShip) {
+      const hookX = b.x + W / 2;
+      await tween(trolley, { x: hookX }, 700, drawTrolley);
+      await tween(trolley, { rope: b.y - 5 }, 450, drawTrolley);
+      const follow = () => { drawTrolley(); b.x = trolley.x - W / 2; b.y = trolley.rope + 5; place(b); };
+      await tween(trolley, { rope: 190 }, 450, follow);
+      await tween(trolley, { x: toX + W / 2 }, 900, follow);
+      await tween(trolley, { rope: toY - 5 }, 500, follow);
+      await tween(trolley, { rope: 190 }, 380, drawTrolley);
+      if (toShip) { $('cargo').append(b.node); b.y -= ship.dy; place(b); }
+    }
+
+    async function load() {
+      await typeCmd('docker compose up -d');
+      for (let i = 0; i < boxes.length; i++) {
+        const b = boxes[i];
+        await carry(b, b.slot[0], b.slot[1] + ship.dy, true);
+        b.x = b.slot[0]; b.y = b.slot[1]; place(b);
+        await tween(ship, { dy: (i + 1) * 3 }, 600, drawShip);
+        $('readout').textContent = `${i + 1} running · grows to fit`;
+      }
+    }
+
+    async function unload() {
+      await wait(1600);
+      await typeCmd('docker compose down');
+      for (let i = boxes.length - 1; i >= 0; i--) {
+        const b = boxes[i];
+        $('free').append(b.node);
+        b.y = b.slot[1] + ship.dy; place(b);
+        await carry(b, b.dock[0], b.dock[1], false);
+        b.x = b.dock[0]; b.y = b.dock[1]; place(b);
+        await tween(ship, { dy: i * 3 }, 600, drawShip);
+        $('readout').textContent = i ? `${i} running · shrinking` : 'idle';
+      }
+      await wait(1800);
+    }
+
+    async function loop() {
+      if (calm) { $('cmd').textContent = 'docker compose up -d'; return; }
+      for (;;) { await load(); await unload(); }
+    }
+    loop();
+
+    // Memory scene: crates come and go, the VM line follows the stack with a lag.
+    (() => {
+      const crates = [];
+      for (let i = 0; i < 8; i++) {
+        const row = Math.floor(i / 4), col = i % 4;
+        const r = el('rect', { x: 72 + col * 46, y: 140 - row * 34, width: 42, height: 28, rx: 2, fill: `var(--c${(i % 5) + 1})`, class: 'memcrate' });
+        crates.push(r);
+        $('memCrates').append(r);
+      }
+      const plan = [1, 2, 4, 6, 8, 8, 5, 3, 1, 1];
+      let step = 0;
+      const show = () => {
+        const n = calm ? 4 : plan[step % plan.length];
+        crates.forEach((c, i) => { c.style.opacity = i < n ? 1 : 0; c.style.transform = i < n ? 'none' : 'translateY(-14px)'; });
+        const rows = Math.ceil(n / 4);
+        $('memLine').style.transform = `translateY(${140 - (rows - 1) * 34 - 12}px)`;
+        step++;
+      };
+      show();
+      if (!calm) setInterval(show, 1100);
+    })();
+
+    // Boot scene: the clock counts in real time to the measured 2.8 s, then the lamp comes on.
+    (async () => {
+      const clock = $('bootClock'), note = $('bootNote');
+      const lit = (on) => { $('bulb').classList.toggle('on', on); $('beam').classList.toggle('on', on); note.textContent = on ? 'dockerd ready' : 'booting'; };
+      if (calm) { clock.textContent = '2.8 s'; lit(true); return; }
+      for (;;) {
+        lit(false);
+        const t0 = performance.now();
+        await new Promise((done) => {
+          const tick = (now) => {
+            const s = Math.min(2.8, (now - t0) / 1000);
+            clock.textContent = `${s.toFixed(1)} s`;
+            if (s < 2.8) requestAnimationFrame(tick); else done();
+          };
+          requestAnimationFrame(tick);
+        });
+        lit(true);
+        await wait(3200);
+      }
+    })();
+
+    const shellLines = [['docker compose up -d', ''], ['curl localhost:8080', 'ok']];
+    async function typeShell() {
+      const shell = $('shell');
+      for (const [cmd, out] of shellLines) {
+        const line = document.createElement('div');
+        shell.append(line);
+        for (const ch of cmd) { line.textContent += ch; if (!calm) await wait(32); }
+        if (out) { const o = document.createElement('div'); o.className = 'out'; o.textContent = out; shell.append(o); }
+        if (!calm) await wait(380);
+      }
+    }
+
+    const io = new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        if (!e.isIntersecting) continue;
+        if (e.target.id === 'shell') typeShell(); else e.target.classList.add('seen');
+        io.unobserve(e.target);
+      }
+    }, { threshold: 0.3 });
+    document.querySelectorAll('.reveal, #shell').forEach((n) => io.observe(n));
+  </script>
+</body>
+</html>

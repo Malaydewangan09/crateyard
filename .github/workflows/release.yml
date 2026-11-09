@@ -1,0 +1,42 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+jobs:
+  release:
+    runs-on: macos-15
+    steps:
+      # Actions are pinned to commits, since a moved tag would run new code with this job's write token.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: go.mod
+      - name: Test
+        run: |
+          go vet ./...
+          go test -race ./...
+      - name: Build Crateyard.app and Crateyard.dmg
+        run: ./app/scripts/dmg.sh
+      - name: Zip and checksum
+        working-directory: app/dist
+        run: |
+          ditto -c -k --keepParent Crateyard.app Crateyard.zip
+          shasum -a 256 Crateyard.zip Crateyard.dmg > SHA256SUMS
+      - uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
+        with:
+          subject-path: |
+            app/dist/Crateyard.zip
+            app/dist/Crateyard.dmg
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" app/dist/Crateyard.zip app/dist/Crateyard.dmg app/dist/SHA256SUMS --generate-notes
