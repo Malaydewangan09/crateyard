@@ -398,6 +398,7 @@
         <li>Work in progress. Memory used while containers run comes back only when the VM sleeps.</li>
         <li>Docker Desktop checks the active docker context every few seconds, so Crateyard cannot sleep while it is open.</li>
         <li>Apple silicon only. TCP ports only, no UDP yet.</li>
+        <li>Crateyard runs the engine, not the <code class="inline">docker</code> command. Without Docker Desktop, get it with <code class="inline">brew install docker docker-compose</code>.</li>
         <li>Not notarized by Apple. The install script avoids the Gatekeeper prompt, a downloaded DMG needs Open Anyway.</li>
         <li>No Kubernetes, and it is not trying to be Docker Desktop.</li>
       </ul>

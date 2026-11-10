@@ -48,6 +48,10 @@ $sudo rm -rf /Applications/Crateyard.app
 $sudo ditto "$tmp/unpacked/Crateyard.app" /Applications/Crateyard.app
 
 echo "Installed /Applications/Crateyard.app. Open it with: open -a Crateyard"
+# Crateyard runs the engine only. Without a docker CLI the first docker command after install fails with "command not found".
+if ! command -v docker >/dev/null 2>&1; then
+  echo "No docker command found. Crateyard needs the docker CLI: brew install docker docker-compose" >&2
+fi
 }
 
 main "$@"

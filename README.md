@@ -14,7 +14,13 @@ What it does today:
 
 ## Install
 
-Needs an Apple silicon Mac and macOS 14 or later.
+Needs an Apple silicon Mac, macOS 14 or later, and the `docker` command. Crateyard runs the engine, not the CLI. If you have never installed Docker Desktop, or removed it (its `docker` goes with it), get the CLI from Homebrew:
+
+```sh
+brew install docker docker-compose
+```
+
+Homebrew then prints one line to add to `~/.docker/config.json` so that `docker compose` finds the plugin. Add it.
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/Malaydewangan09/crateyard/main/install.sh | sh
