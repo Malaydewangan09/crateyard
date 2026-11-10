@@ -8,3 +8,5 @@ require (
 	github.com/Code-Hex/go-infinity-channel v1.0.0 // indirect
 	golang.org/x/mod v0.22.0 // indirect
 )
+
+replace github.com/Code-Hex/vz/v3 => ./third_party/vz
