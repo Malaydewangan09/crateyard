@@ -30,6 +30,9 @@ const (
 	dataDiskSize  = 64 << 30
 	outDiskSize   = 128 << 20
 	setupTimeout  = 20 * time.Minute
+	// rootMarker is written when setup finishes. Bump it when provision.sh changes something an existing root disk lacks,
+	// and the app builds the root disk again, keeping the data disk. The app checks the same name.
+	rootMarker = "root-v2"
 )
 
 // netbootSHA256 holds the hashes of Alpine's netboot files for alpineRelease, taken over HTTPS from dl-cdn.
@@ -61,8 +64,10 @@ func buildImage(dir string) error {
 		}
 	}
 	// Removing the kernel first means a failed setup leaves no half-installed engine that run would try to boot.
-	if err := os.Remove(filepath.Join(dir, "Image")); err != nil && !errors.Is(err, os.ErrNotExist) {
-		return err
+	for _, name := range []string{"Image", rootMarker} {
+		if err := os.Remove(filepath.Join(dir, name)); err != nil && !errors.Is(err, os.ErrNotExist) {
+			return err
+		}
 	}
 
 	netbootKernel := filepath.Join(cache, "Image-netboot")
@@ -122,7 +127,10 @@ func buildImage(dir string) error {
 		_ = vm.Stop()
 		return fmt.Errorf("setup did not finish within %v, check your network and run it again", setupTimeout)
 	}
-	return extractBootFiles(outDisk, dir)
+	if err := extractBootFiles(outDisk, dir); err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(dir, rootMarker), nil, 0o644)
 }
 
 // download fetches url to dest unless a file with the expected SHA-256 is already there, and rejects any other content.

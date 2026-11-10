@@ -97,7 +97,7 @@ func stateDir() (string, error) {
 }
 
 func run(dir string) error {
-	for _, name := range []string{"Image", "initramfs", "root.img", "data.img"} {
+	for _, name := range []string{"Image", "initramfs", "root.img", "data.img", rootMarker} {
 		if _, err := os.Stat(filepath.Join(dir, name)); err != nil {
 			return fmt.Errorf("%s is missing in %s, run 'crateyardd image' first", name, dir)
 		}

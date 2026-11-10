@@ -366,8 +366,10 @@ struct SetupView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Set up Crateyard").font(.system(size: 24, weight: .semibold))
-            Text("Crateyard builds a small Linux VM with Docker inside, once. It downloads about 200 MB from Alpine Linux and takes a few minutes.")
+            Text(engine.hasDataDisk ? "Update the VM" : "Set up Crateyard").font(.system(size: 24, weight: .semibold))
+            Text(engine.hasDataDisk
+                 ? "This version of Crateyard needs a new VM system disk. Your images, containers and volumes stay. It downloads about 200 MB from Alpine Linux and takes a few minutes."
+                 : "Crateyard builds a small Linux VM with Docker inside, once. It downloads about 200 MB from Alpine Linux and takes a few minutes.")
                 .foregroundStyle(Theme.soft)
             HStack {
                 TextField("Alpine mirror (optional), e.g. https://mirror.leaseweb.com/alpine", text: $mirror)

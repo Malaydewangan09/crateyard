@@ -68,8 +68,11 @@ final class Engine {
 
     var runningCount: Int { containers.filter(\.isRunning).count }
 
+    var hasDataDisk: Bool { FileManager.default.fileExists(atPath: stateDir.appendingPathComponent("data.img").path) }
+
+    /// root-v2 matches rootMarker in crateyardd. A root disk from an older setup lacks it, so setup runs again and keeps the data disk.
     private var isInstalled: Bool {
-        ["Image", "initramfs", "root.img", "data.img"].allSatisfy {
+        ["Image", "initramfs", "root.img", "data.img", "root-v2"].allSatisfy {
             FileManager.default.fileExists(atPath: stateDir.appendingPathComponent($0).path)
         }
     }

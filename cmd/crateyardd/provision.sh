@@ -40,14 +40,15 @@ chroot /mnt rc-update add docker default
 mkdir -p /mnt/etc/local.d
 printf '#!/bin/sh\ntail -F /var/log/docker.log > /dev/hvc0 2>&1 &\n' > /mnt/etc/local.d/docker-log.start
 # The Mac reaches dockerd over vsock, because macOS local-network privacy blocks unsigned tools from the VM's IP.
-printf '#!/bin/sh\nmodprobe vmw_vsock_virtio_transport\nsocat VSOCK-LISTEN:2375,reuseaddr,fork,backlog=128 UNIX-CONNECT:/var/run/docker.sock > /dev/hvc0 2>&1 &\n' > /mnt/etc/local.d/docker-vsock.start
+# socat's -t is how long it keeps a connection after one side half-closes. The default 0.5 s cut off `docker run` output.
+printf '#!/bin/sh\nmodprobe vmw_vsock_virtio_transport\nsocat -t 315360000 VSOCK-LISTEN:2375,reuseaddr,fork,backlog=128 UNIX-CONNECT:/var/run/docker.sock > /dev/hvc0 2>&1 &\n' > /mnt/etc/local.d/docker-vsock.start
 # The host sizes the memory balloon from the guest's own view of used memory.
 printf '#!/bin/sh\nsocat VSOCK-LISTEN:2376,reuseaddr,fork SYSTEM:"cat /proc/meminfo /proc/vmstat" > /dev/hvc0 2>&1 &\n' > /mnt/etc/local.d/meminfo-vsock.start
 # Published container ports: the Mac sends the port number on the first line, then the guest pipes to it.
 mkdir -p /mnt/usr/local/bin
-printf '#!/bin/sh\nread -r port\ncase "$port" in ""|*[!0-9]*) exit 1;; esac\nexec socat STDIO TCP:127.0.0.1:"$port"\n' > /mnt/usr/local/bin/crateyard-portfwd
+printf '#!/bin/sh\nread -r port\ncase "$port" in ""|*[!0-9]*) exit 1;; esac\nexec socat -t 315360000 STDIO TCP:127.0.0.1:"$port"\n' > /mnt/usr/local/bin/crateyard-portfwd
 chmod +x /mnt/usr/local/bin/crateyard-portfwd
-printf '#!/bin/sh\nsocat VSOCK-LISTEN:2377,reuseaddr,fork,backlog=128 EXEC:/usr/local/bin/crateyard-portfwd > /dev/hvc0 2>&1 &\n' > /mnt/etc/local.d/portfwd-vsock.start
+printf '#!/bin/sh\nsocat -t 315360000 VSOCK-LISTEN:2377,reuseaddr,fork,backlog=128 EXEC:/usr/local/bin/crateyard-portfwd > /dev/hvc0 2>&1 &\n' > /mnt/etc/local.d/portfwd-vsock.start
 chmod +x /mnt/etc/local.d/docker-log.start /mnt/etc/local.d/docker-vsock.start /mnt/etc/local.d/meminfo-vsock.start /mnt/etc/local.d/portfwd-vsock.start
 # Hourly TRIM lets APFS reclaim blocks freed by deleted images, so data.img shrinks.
 printf '#!/bin/sh\nfstrim /var/lib/docker\n' > /mnt/etc/periodic/hourly/fstrim
