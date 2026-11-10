@@ -16,6 +16,8 @@ type machineSpec struct {
 	disks   []string
 	console *os.File
 	share   string
+	// isRosetta shares Apple's Rosetta with the guest, which registers it for amd64 binaries.
+	isRosetta bool
 }
 
 func newMachine(s machineSpec) (*vz.VirtualMachine, error) {
@@ -89,11 +91,8 @@ func newMachine(s machineSpec) (*vz.VirtualMachine, error) {
 	}
 	cfg.SetStorageDevicesVirtualMachineConfiguration(storage)
 
+	var shares []vz.DirectorySharingDeviceConfiguration
 	if s.share != "" {
-		fs, err := vz.NewVirtioFileSystemDeviceConfiguration("crateyard")
-		if err != nil {
-			return nil, err
-		}
 		dir, err := vz.NewSharedDirectory(s.share, false)
 		if err != nil {
 			return nil, err
@@ -102,14 +101,49 @@ func newMachine(s machineSpec) (*vz.VirtualMachine, error) {
 		if err != nil {
 			return nil, err
 		}
-		fs.SetDirectoryShare(single)
-		cfg.SetDirectorySharingDevicesVirtualMachineConfiguration([]vz.DirectorySharingDeviceConfiguration{fs})
+		fs, err := directoryShare("crateyard", single)
+		if err != nil {
+			return nil, err
+		}
+		shares = append(shares, fs)
 	}
+	if s.isRosetta {
+		rosetta, err := vz.NewLinuxRosettaDirectoryShare()
+		if err != nil {
+			return nil, fmt.Errorf("share Rosetta: %w", err)
+		}
+		fs, err := directoryShare("rosetta", rosetta)
+		if err != nil {
+			return nil, err
+		}
+		shares = append(shares, fs)
+	}
+	cfg.SetDirectorySharingDevicesVirtualMachineConfiguration(shares)
 
 	if ok, err := cfg.Validate(); !ok {
 		return nil, fmt.Errorf("machine configuration is invalid: %w", err)
 	}
 	return vz.NewVirtualMachine(cfg)
+}
+
+func directoryShare(tag string, share vz.DirectoryShare) (*vz.VirtioFileSystemDeviceConfiguration, error) {
+	fs, err := vz.NewVirtioFileSystemDeviceConfiguration(tag)
+	if err != nil {
+		return nil, err
+	}
+	fs.SetDirectoryShare(share)
+	return fs, nil
+}
+
+// rosettaAvailable reports whether Rosetta can be shared with the guest, which otherwise runs amd64 binaries through QEMU.
+func rosettaAvailable() bool {
+	switch vz.LinuxRosettaDirectoryShareAvailability() {
+	case vz.LinuxRosettaAvailabilityInstalled:
+		return true
+	case vz.LinuxRosettaAvailabilityNotInstalled:
+		fmt.Fprintln(os.Stderr, "crateyardd: Rosetta is not installed, so amd64 images run through QEMU, which is slower. Install it with: softwareupdate --install-rosetta --agree-to-license")
+	}
+	return false
 }
 
 // waitStopped blocks until the guest powers off or the VM fails.

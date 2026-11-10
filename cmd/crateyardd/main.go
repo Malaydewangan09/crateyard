@@ -121,7 +121,8 @@ func run(dir string) error {
 		memory:  memory,
 		disks:   []string{filepath.Join(dir, "root.img"), filepath.Join(dir, "data.img")},
 		console: console,
-		share:   "/Users",
+		share:     "/Users",
+		isRosetta: rosettaAvailable(),
 	}, st)
 
 	stop := make(chan struct{})

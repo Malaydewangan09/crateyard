@@ -21,21 +21,49 @@ mount --bind /dev /mnt/dev
 mount -t proc proc /mnt/proc
 mount -t sysfs sys /mnt/sys
 
-apk add --root /mnt --initdb --no-cache alpine-base linux-virt docker e2fsprogs socat
+apk add --root /mnt --initdb --no-cache alpine-base linux-virt docker e2fsprogs socat qemu-x86_64
 
 cat > /mnt/etc/fstab <<'EOF'
 /dev/vda / ext4 rw,relatime 0 1
 /dev/vdb /var/lib/docker ext4 rw,relatime 0 2
 crateyard /Users virtiofs rw,nofail 0 0
+rosetta /opt/rosetta virtiofs ro,nofail 0 0
 EOF
 printf 'virtiofs\nvirtio_balloon\n' >> /mnt/etc/modules
-mkdir -p /mnt/var/lib/docker /mnt/etc/docker /mnt/etc/network /mnt/Users
+mkdir -p /mnt/var/lib/docker /mnt/etc/docker /mnt/etc/network /mnt/Users /mnt/opt/rosetta
 echo crateyard > /mnt/etc/hostname
 printf 'auto lo\niface lo inet loopback\n\nauto eth0\niface eth0 inet dhcp\n' > /mnt/etc/network/interfaces
 
 for s in devfs dmesg mdev hwdrivers; do chroot /mnt rc-update add $s sysinit; done
 for s in modules sysctl hostname bootmisc root localmount networking cgroups seedrng; do chroot /mnt rc-update add $s boot; done
 chroot /mnt rc-update add docker default
+# amd64 images run through Rosetta when the Mac shares it and it works, otherwise through QEMU, which is slower.
+# Rosetta on macOS 15 rejects the AT_HWCAP3 aux vector of Linux 6.13+, hence the test run. https://github.com/lima-vm/lima/issues/3592
+# F opens the interpreter now, so containers use it without seeing its path. The magic and mask match x86-64 ELF.
+mkdir -p /mnt/usr/libexec/crateyard
+echo 'f0VMRgIBAQAAAAAAAAAAAAIAPgABAAAAeABAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAEAAOAABAAAAAAAAAAEAAAAFAAAAAAAAAAAAAAAAAEAAAAAAAAAAQAAAAAAAgQAAAAAAAACBAAAAAAAAAAAQAAAAAAAAuDwAAAAx/w8F' | base64 -d > /mnt/usr/libexec/crateyard/amd64-exit0
+chmod +x /mnt/usr/libexec/crateyard/amd64-exit0
+cat > /mnt/etc/init.d/crateyard-amd64 <<'EOF'
+#!/sbin/openrc-run
+depend() { need localmount; before docker; }
+register() {
+	printf ':amd64:M::%s:%s:%s:OCF' '\x7fELF\x02\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x3e\x00' \
+		'\xff\xff\xff\xff\xff\xfe\xfe\x00\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff\xff' "$1" > /proc/sys/fs/binfmt_misc/register
+}
+start() {
+	[ -e /proc/sys/fs/binfmt_misc/register ] || mount -t binfmt_misc binfmt_misc /proc/sys/fs/binfmt_misc
+	[ -e /proc/sys/fs/binfmt_misc/amd64 ] && return 0
+	if [ -x /opt/rosetta/rosetta ]; then
+		register /opt/rosetta/rosetta
+		if /usr/libexec/crateyard/amd64-exit0 2>/dev/null; then einfo "amd64 images run through Rosetta"; return 0; fi
+		echo -1 > /proc/sys/fs/binfmt_misc/amd64
+	fi
+	register /usr/bin/qemu-x86_64
+	einfo "amd64 images run through QEMU"
+}
+EOF
+chmod +x /mnt/etc/init.d/crateyard-amd64
+chroot /mnt rc-update add crateyard-amd64 default
 # The host has no shell into the guest yet, so dockerd's log goes to the console log on the Mac.
 mkdir -p /mnt/etc/local.d
 printf '#!/bin/sh\ntail -F /var/log/docker.log > /dev/hvc0 2>&1 &\n' > /mnt/etc/local.d/docker-log.start

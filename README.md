@@ -10,6 +10,7 @@ What it does today:
 - Forwards the Docker socket over vsock to `~/.crateyard/docker.sock`, and switches the docker CLI to a `crateyard` context while it runs. Quitting Crateyard switches back to the context you had before.
 - Forwards published container ports to the Mac (`docker run -p 8080:80` answers on `localhost:8080`).
 - Mounts `/Users` into the VM at the same path, so bind mounts work.
+- Runs Intel (amd64) images with `--platform linux/amd64`, through Rosetta when it works and QEMU otherwise. `mysql:5.7` starts in about 20 s under QEMU on an M4 Air.
 - Runs `fstrim` hourly so the data disk shrinks after images are deleted.
 
 ## Install
@@ -61,6 +62,7 @@ CRATEYARD_ALPINE_MIRROR=https://mirror.leaseweb.com/alpine ./bin/crateyardd imag
 - While containers run, memory Linux has used stays with the VM, even after Linux frees it. Apple's virtio balloon does not report free pages, so only sleep (or Stop) gives it back.
 - Docker Desktop's window polls the active docker context every few seconds, so Crateyard cannot sleep while Docker Desktop is open. Quit it to get sleep.
 - Linux in the VM runs with `init_on_alloc=0`. Alpine zeroes memory on allocation by default, a hardening option, but zeroing writes every page and makes macOS back the whole VM.
+- Apple's Rosetta on macOS 15 fails on Linux 6.13 and later ("unhandled auxillary vector type 29", [lima#3592](https://github.com/lima-vm/lima/issues/3592)), and Alpine ships 6.18. Crateyard tests Rosetta at boot and falls back to QEMU, which is several times slower. The console log says which one is in use.
 - TCP port forwarding only. No UDP.
 - Ports published on 0.0.0.0 listen on every network interface of the Mac, as with Docker Desktop. Publish with `-p 127.0.0.1:8080:80` to keep a port local.
 - Ad-hoc signed, not notarized.
